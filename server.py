@@ -7,7 +7,7 @@ app = FastAPI()
 @app.get("/genres")
 def genres(response : Response, status_code=200):
     with open("./data/genres.json", "r") as file:
-        genres = json.loads(file.read())
+        genres = [genre.strip() for genre in json.loads(file.read())]
         return genres
 
 @app.get("/predict")
