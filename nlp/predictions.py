@@ -3,17 +3,15 @@ import numpy as np
 import string
 from nltk import word_tokenize, pos_tag
 from nltk.stem.wordnet import WordNetLemmatizer
-from nltk.corpus import wordnet
+from nltk.corpus import stopwords, wordnet
 import json
 
 with open("./data/synonym_corpus.json","r") as file:
     word_synonym_corpus = json.loads(file.read())
 
-with open("./data/stopwords.json","r") as file:
-    stopping_words = set(json.loads(file.read()))
-
 
 df = pd.read_csv("./data/final_data.csv")
+stopping_words = set(stopwords.words("english"))
 lemmatizer = WordNetLemmatizer()
 POS_TAG_MAP = {
     "N" : wordnet.NOUN,
