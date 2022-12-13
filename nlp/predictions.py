@@ -96,6 +96,7 @@ def jsonify_predictions(pred_df : pd.DataFrame, word_mappings):
     mal_ids = pred_df_json["mal_id"].values()
     names = pred_df_json["name"].values()
     scores = pred_df_json["score"].values()
+    genres = pred_df_json["genres"].values()
     synopses = pred_df_json["synopsis"].values()
 
     # find the picture ids
@@ -104,10 +105,11 @@ def jsonify_predictions(pred_df : pd.DataFrame, word_mappings):
     if "similarity_score" in pred_df_json:
         similarity_scores = pred_df_json["similarity_score"].values()
 
-        for mal_id, name, score, synopsis, picture_url, similarity_score in zip(mal_ids, names, scores, synopses, picture_urls, similarity_scores):
+        for mal_id, name, genre, score, synopsis, picture_url, similarity_score in zip(mal_ids, names, genres, scores, synopses, picture_urls, similarity_scores):
             pred_json = {
                 "mal_id" : mal_id,
                 "name" : name,
+                "genres" : genre,
                 "score" : score,
                 "synopsis" : synopsis,
                 "picture_url" : picture_url,
@@ -119,11 +121,12 @@ def jsonify_predictions(pred_df : pd.DataFrame, word_mappings):
         final_result = {"predictions" : final_pred_json, "word_mappings" : word_mappings}
         return final_result
     
-    for mal_id, name, score, synopsis, picture_url in zip(mal_ids, names, scores, synopses, picture_urls):
+    for mal_id, name, genre, score, synopsis, picture_url in zip(mal_ids, names, genres, scores, synopses, picture_urls):
             pred_json = {
                 "mal_id" : mal_id,
                 "name" : name,
                 "score" : score,
+                "genres" : genre,
                 "synopsis" : synopsis,
                 "picture_url" : picture_url
             }
