@@ -11,7 +11,7 @@ def genres(response : Response, status_code=200):
         return genres
 
 @app.get("/predict")
-async def predict(response : Response, score=None, genres=None, synopsis=None, num_recs=3, status_code=200):
+async def predict(response : Response, score=None, genres=None, synopsis=None, num_recs : int = 3, status_code=200):
     if score is None and genres is None and synopsis is None:
         response.status_code = 400
         return {"status" : "failure", "reason" : "Not enough query parameters to make any valid predictions"}
