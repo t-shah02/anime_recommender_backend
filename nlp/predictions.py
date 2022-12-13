@@ -1,3 +1,7 @@
+import sys
+sys.path.append("../")
+
+from collections import defaultdict
 import pandas as pd 
 import numpy as np 
 import string
@@ -5,6 +9,7 @@ from nltk import word_tokenize, pos_tag
 from nltk.stem.wordnet import WordNetLemmatizer
 from nltk.corpus import stopwords, wordnet
 import json
+from scraping.mal_scraper import get_anime_id_pictures
 
 with open("./data/synonym_corpus.json","r") as file:
     word_synonym_corpus = json.loads(file.read())
@@ -54,6 +59,8 @@ def find_most_similar_anime_by_keywords(user_description, synonyms_corpus, targe
     cleaned_user_description = normalize_synopsis(user_description)
     cleaned_user_tokens = set(cleaned_user_description.split(" "))
 
+    w1_mappings = defaultdict(set)
+
     def similarity_score(synopsis : str):
         synopsis_tokens = set(synopsis.split(" "))
         shared = cleaned_user_tokens.intersection(synopsis_tokens)
@@ -65,6 +72,7 @@ def find_most_similar_anime_by_keywords(user_description, synonyms_corpus, targe
                 w2_syns = synonyms_corpus.get(w2, [])
                 if w1 in w2_syns:
                     shared.add(w1)
+                    w1_mappings[w1].add(w2)
                     break
     
         return len(shared) / len(cleaned_user_tokens)
@@ -73,10 +81,12 @@ def find_most_similar_anime_by_keywords(user_description, synonyms_corpus, targe
 
     target_df["similarity_score"] = target_df.normalized_synopsis.apply(similarity_score)
 
-    return target_df
+    w1_mappings = {w1 : list(syns) for w1, syns in w1_mappings.items()}
+
+    return target_df, w1_mappings
 
 
-def jsonify_predictions(pred_df : pd.DataFrame):
+def jsonify_predictions(pred_df : pd.DataFrame, word_mappings):
     cols_to_keep = [col_name for col_name in pred_df.columns if col_name != "normalized_synopsis"]
     pred_df_json = pred_df[cols_to_keep].to_dict()   
     
@@ -88,33 +98,40 @@ def jsonify_predictions(pred_df : pd.DataFrame):
     scores = pred_df_json["score"].values()
     synopses = pred_df_json["synopsis"].values()
 
+    # find the picture ids
+    picture_urls = get_anime_id_pictures(mal_ids).values()
+
     if "similarity_score" in pred_df_json:
         similarity_scores = pred_df_json["similarity_score"].values()
 
-        for mal_id, name, score, synopsis, similarity_score in zip(mal_ids, names, scores, synopses, similarity_scores):
+        for mal_id, name, score, synopsis, picture_url, similarity_score in zip(mal_ids, names, scores, synopses, picture_urls, similarity_scores):
             pred_json = {
                 "mal_id" : mal_id,
                 "name" : name,
                 "score" : score,
                 "synopsis" : synopsis,
+                "picture_url" : picture_url,
                 "similarity_score" : similarity_score
             }
 
             final_pred_json.append(pred_json)
 
-        return final_pred_json
+        final_result = {"predictions" : final_pred_json, "word_mappings" : word_mappings}
+        return final_result
     
-    for mal_id, name, score, synopsis in zip(mal_ids, names, scores, synopses):
+    for mal_id, name, score, synopsis, picture_url in zip(mal_ids, names, scores, synopses, picture_urls):
             pred_json = {
                 "mal_id" : mal_id,
                 "name" : name,
                 "score" : score,
-                "synopsis" : synopsis
+                "synopsis" : synopsis,
+                "picture_url" : picture_url
             }
 
             final_pred_json.append(pred_json)
 
-    return final_pred_json
+    final_result = {"predictions" : final_pred_json, "word_mappings" : word_mappings}
+    return final_result
 
 
 def get_predictions(score=None, genres=None, synopsis=None, num_recommendations=3): 
@@ -123,6 +140,7 @@ def get_predictions(score=None, genres=None, synopsis=None, num_recommendations=
         return False
 
     pred_df = df.copy()
+    word_mappings = {}
 
     SCORE_DIFF_THRESHOLD = 0.85
 
@@ -139,9 +157,9 @@ def get_predictions(score=None, genres=None, synopsis=None, num_recommendations=
         pred_df = pred_df[ genre_bits_or ]
 
     if synopsis:
-        pred_df = find_most_similar_anime_by_keywords(synopsis, word_synonym_corpus, pred_df)  
+        pred_df, word_mappings = find_most_similar_anime_by_keywords(synopsis, word_synonym_corpus, pred_df)  
         pred_df = pred_df.sort_values(by="similarity_score", ascending=False)
 
     pred_df = pred_df.head(n=num_recommendations)
 
-    return jsonify_predictions(pred_df)
+    return jsonify_predictions(pred_df, word_mappings)

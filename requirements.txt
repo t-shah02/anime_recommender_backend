@@ -2,3 +2,7 @@ fastapi[all]
 nltk
 pandas
 gunicorn
+bs4
+requests
+python-dotenv
+psycopg2
