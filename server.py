@@ -1,8 +1,22 @@
 from fastapi import FastAPI, Response
+from fastapi.middleware.cors import CORSMiddleware
 from nlp.predictions import get_predictions
 import json
 
 app = FastAPI()
+
+origins = [
+    "http://localhost:3000",
+    "https://anime-recommender.vercel.app"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/genres")
 def genres(response : Response, status_code=200):
